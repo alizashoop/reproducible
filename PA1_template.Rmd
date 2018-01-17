@@ -1,0 +1,133 @@
+---
+title: "Reproducible Research - Week 2 Project"
+author: "Aliza Shoop"
+output: html_document
+---
+# Read Date & Load Libraries
+
+```{r echo=TRUE}
+setwd("~/dsCourses")
+act <- read.csv("activity.csv")
+
+library(ggplot2)
+library(lubridate)
+library(plyr)
+```
+
+
+## Copy data and clean up
+```{r echo=TRUE}
+act2 <- act
+act2$date <- as.Date(act2$date)
+#remove na's
+act2 <-na.omit(act2)
+```
+
+# What is mean total number of steps taken per day?
+
+## Mean and Median of steps
+```{r echo=TRUE}
+mean1 <- mean(act2$steps, na.rm = TRUE)
+mean1
+median1 <- median(act2$steps, na.rm = TRUE)
+median1
+```
+
+## Create a histogram of steps
+```{r echo=TRUE}
+#assign a column with day number
+act2$day<- day(act2$date)
+#plot histogram
+p1 <- ggplot(act2, aes(x=day, y=steps)) + 
+     geom_histogram(stat="identity") + 
+     ggtitle("Total number of steps taken per day") + 
+     xlab("Day") + 
+     ylab("Steps")
+
+p1
+```
+
+# What is the average daily activity pattern?
+
+## Get averages by interval
+
+```{r echo=TRUE}
+avg <- aggregate(act2$steps ~ act2$interval, FUN = mean)
+names(avg) <- c("interval","steps")
+```
+
+## Plot a line chart
+
+```{r echo=TRUE}
+p2<- ggplot() + geom_line(aes(y=steps,x=interval),
+                          data=avg)
+p2+labs(title="Average Steps per Day",x="Interval", y="Steps")
+
+```
+
+## Which 5 minute interval has the highest average steps?
+
+```{r echo=TRUE}
+maxI<- avg[which.max(avg$steps),]
+
+maxI
+```
+
+# Imputing missing values
+
+```{r echo=TRUE}
+#get total na's from original data
+sum(is.na(act))
+#copy data to new table
+act3 <- act
+#copy mean of steps to na's
+for(i in 1:nrow(act3)){
+    if(is.na(act3$steps[i])){
+        act3$steps[i] <- mean(act3$steps,na.rm=TRUE)
+    }
+}
+#check for na's in new data
+sum(is.na(act3))
+```
+## Make a histogram of the new data
+
+```{r echo=TRUE}
+act3$day<- day(act3$date)
+
+p3 <- ggplot(act3, aes(x=day, y=steps)) + 
+     geom_histogram(stat="identity") + 
+     ggtitle("Total number of steps taken per day") + 
+     xlab("Day") + 
+     ylab("Steps")
+
+p3
+```
+
+## Calculate mean and median for new dataset
+```{r echo=TRUE}
+mean2 <-mean(act3$steps)
+median2 <-median(act3$steps)
+```
+*Mean of original data `r mean1` vs mean of new data `r mean2`*  
+*Median of original data `r median1` vs median of new data `r median2`*
+
+# Are there differences in activity patterns between weekdays and weekends?
+
+```{r echo=TRUE}
+#create a weekday column
+act3$date <- as.Date(act3$date)
+act3$weekday <- ifelse(weekdays(act3$date) == "Saturday" | weekdays(act3$date) == "Sunday", "weekend", "weekday")
+
+#calculate by interval
+new_avg <- aggregate(act3$steps, list(act3$interval, act3$weekday), FUN = mean)
+names(new_avg) <- c("steps", "weekday", "interval")
+```
+
+## Plot the difference between weekdays and weekends
+```{r echo=TRUE}
+ggplot(new_avg, aes(x=steps, y=interval)) + 
+  geom_line() + 
+  xlab("Interval") + 
+  ylab("Average Steps") + 
+  facet_grid(.~weekday)
+```
